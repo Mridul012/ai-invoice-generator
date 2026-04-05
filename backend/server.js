@@ -6,6 +6,10 @@ const path = require("path");
 const connectDB = require('./config/db');
 const { METHODS } = require("http");
 
+const authRoutes = require("./routes/authroutes");
+const invoiceRoutes = require("./routes/invoiceroutes");
+const aiRoutes = require("./routes/airoutes");
+
 const app = express();
 
 app.use(cors({
@@ -18,6 +22,11 @@ app.use(cors({
 connectDB();
 
 app.use(express.json());
+
+app.use("/api/auth",authRoutes);
+app.use("/api/invoices",invoiceRoutes);
+app.use("/api/ai",aiRoutes)
+
 
 
 
