@@ -16,13 +16,14 @@ exports.createInvoice = async (req, res) => {
         } = req.body;
 
         let subtotal = 0;
-        let taxtotal = 0;
+        let taxTotal = 0;
         items.forEach((item) => {
-            subtotal = item.unitPrice * item.quantity;
-            taxtotal = ((item.unitPrice * item.quantity))*((item.taxpercent || 0) / 100);
+            const itemTotal = item.unitPrice * item.quantity;
+            subtotal += itemTotal;
+            taxTotal += itemTotal * ((item.taxpercent || 0) / 100);
         });
 
-        const total = subtotal + taxtotal;
+        const total = subtotal + taxTotal;
 
         const invoice = new Invoice({
             user,
@@ -35,7 +36,7 @@ exports.createInvoice = async (req, res) => {
             notes,
             paymentTerms,
             subtotal,
-            taxtotal,
+            taxTotal,
             total});
         
         await invoice.save();
@@ -53,7 +54,7 @@ exports.createInvoice = async (req, res) => {
 
 exports.getInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find().populate("user", "name email");
+        const invoices = await Invoice.find({ user: req.user._id }).populate("user", "name email");
         res.json(invoices);
 
 
@@ -90,40 +91,38 @@ exports.updateInvoice = async (req, res) => {
             notes,
             paymentTerms,
             status
-        } = req.body
+        } = req.body;
 
-        let subtotal = 0;
-        let taxtotal = 0;
-        items.forEach((item) => {
-            subtotal = item.unitPrice * item.quantity;
-            taxtotal = ((item.unitPrice * item.quantity))*((item.taxpercent || 0) / 100);
-        });
+        const updateData = { status };
 
-        const total = subtotal + taxtotal;
+        // recalculate totals only if items are provided
+        if (items && items.length > 0) {
+            let subtotal = 0;
+            let taxTotal = 0;
+            items.forEach((item) => {
+                const itemTotal = item.unitPrice * item.quantity;
+                subtotal += itemTotal;
+                taxTotal += itemTotal * ((item.taxpercent || 0) / 100);
+            });
+            const total = subtotal + taxTotal;
 
-        const updateInvoice = await Invoice.findByIdAndUpdate(
+            Object.assign(updateData, {
+                invoiceNumber, invoiceDate, dueDate, billTo, billFrom,
+                items, notes, paymentTerms, subtotal, taxTotal, total
+            });
+        }
+
+        const updatedInvoice = await Invoice.findByIdAndUpdate(
             req.params.id,
-            {
-                invoiceNumber,
-                invoiceDate,
-                dueDate,
-                billTo,
-                billFrom,
-                items,
-                notes,
-                paymentTerms,
-                status,
-                subtotal,
-                taxtotal,
-                total
-            },
+            updateData,
             { new: true }
         );
 
-        if(!updateInvoice){
-            return res.status(404).json({message:"Invoice not found"});
+        if (!updatedInvoice) {
+            return res.status(404).json({ message: "Invoice not found" });
         }
 
+        res.json(updatedInvoice);
 
     } catch (err) {
         console.error("Error updating invoice", err);
