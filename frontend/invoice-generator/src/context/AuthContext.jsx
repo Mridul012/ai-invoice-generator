@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
-  // fetch user profile on app load if token exists
+
   const fetchUser = useCallback(async () => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {

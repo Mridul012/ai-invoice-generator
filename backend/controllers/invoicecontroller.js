@@ -95,7 +95,7 @@ exports.updateInvoice = async (req, res) => {
 
         const updateData = { status };
 
-        // recalculate totals only if items are provided
+        
         if (items && items.length > 0) {
             let subtotal = 0;
             let taxTotal = 0;

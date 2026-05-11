@@ -8,8 +8,8 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F5EF]">
+        <div className="w-5 h-5 border-2 border-[#D8D4C8] border-t-[#4A7C59] rounded-full animate-spin" />
       </div>
     );
   }
@@ -18,7 +18,9 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return <DashboardLayout>{children ? children : <Outlet />}</DashboardLayout>;
+  return (
+    <DashboardLayout>{children ? children : <Outlet />}</DashboardLayout>
+  );
 };
 
 export default ProtectedRoute;

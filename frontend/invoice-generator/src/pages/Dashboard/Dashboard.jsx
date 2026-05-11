@@ -1,9 +1,102 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
-import { formatCurrency } from "../../utils/helper";
+import { formatCurrency, formatDate } from "../../utils/helper";
 import toast from "react-hot-toast";
-import { FileText, CheckCircle, Clock, IndianRupee, Sparkles } from "lucide-react";
+import StatusBadge from "../../components/ui/StatusBadge";
+
+const MONO = { fontFamily: "'JetBrains Mono', 'Fira Code', monospace" };
+
+const TABLE_COLS = "grid-cols-[2fr_2fr_1.5fr_1.5fr_1.2fr_0.8fr]";
+
+const SkeletonRows = () => (
+  <>
+    {[["55%", "30%", "20%", "18%"], ["70%", "28%", "22%", "16%"], ["45%", "32%", "18%", "20%"]].map(
+      (widths, i) => (
+        <div
+          key={i}
+          className="px-8 py-4 flex items-center gap-6 animate-pulse bg-[#FDFCF8]"
+          style={{
+            borderBottomWidth: "0.5px",
+            borderBottomStyle: "solid",
+            borderBottomColor: "#ECEAE0",
+          }}
+        >
+          {widths.map((w, j) => (
+            <div
+              key={j}
+              className="h-3 bg-[#EFECE3] rounded"
+              style={{ width: w, flexShrink: 0 }}
+            />
+          ))}
+        </div>
+      )
+    )}
+  </>
+);
+
+const EmptyState = () => (
+  <div className="py-16 flex flex-col items-center text-center px-8">
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 48 48"
+      fill="none"
+      className="mb-4"
+    >
+      <rect
+        x="8"
+        y="4"
+        width="32"
+        height="40"
+        rx="3"
+        stroke="#D8D4C8"
+        strokeWidth="1.5"
+        fill="none"
+      />
+      <line
+        x1="24"
+        y1="17"
+        x2="24"
+        y2="31"
+        stroke="#D8D4C8"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="17"
+        y1="24"
+        x2="31"
+        y2="24"
+        stroke="#D8D4C8"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="14"
+        y1="36"
+        x2="28"
+        y2="36"
+        stroke="#ECEAE0"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+    <p className="text-sm font-medium text-[#5A5848] mb-1">
+      Your first invoice is one prompt away
+    </p>
+    <p className="text-xs text-[#8A8778] max-w-xs leading-relaxed">
+      Paste any email, note, or message and AI builds it instantly
+    </p>
+    <Link
+      to="/workspace"
+      className="mt-4 inline-block text-xs px-4 py-2 bg-[#4A7C59] text-white rounded-md hover:bg-[#3d6b4a] transition-colors duration-150"
+    >
+      Generate your first invoice →
+    </Link>
+  </div>
+);
 
 const Dashboard = () => {
   const [invoices, setInvoices] = useState([]);
@@ -12,10 +105,25 @@ const Dashboard = () => {
   const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {
+    const fetchInsights = async () => {
+      setInsightsLoading(true);
+      try {
+        const res = await axiosInstance.post(API_PATHS.AI.DASHBOARD_SUMMARY);
+        setInsights(res.data.insights || []);
+      } catch {
+        // silent fail
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
     const fetchInvoices = async () => {
       try {
         const res = await axiosInstance.get(API_PATHS.INVOICES.GET_ALL);
         setInvoices(res.data);
+        if (res.data.length > 0) {
+          fetchInsights();
+        }
       } catch (err) {
         console.error(err);
         toast.error("Failed to load dashboard data");
@@ -27,159 +135,202 @@ const Dashboard = () => {
     fetchInvoices();
   }, []);
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      setInsightsLoading(true);
-      try {
-        const res = await axiosInstance.post(API_PATHS.AI.DASHBOARD_SUMMARY);
-        setInsights(res.data.insights || []);
-      } catch (err) {
-        console.error("Failed to load AI insights:", err);
-      } finally {
-        setInsightsLoading(false);
-      }
-    };
-
-    fetchInsights();
-  }, []);
-
-  const totalInvoices = invoices.length;
-  const paidInvoices = invoices.filter((inv) => inv.status === "Paid");
-  const unpaidInvoices = invoices.filter((inv) => inv.status === "Unpaid");
-  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const paid = invoices.filter((inv) => inv.status === "Paid");
+  const pending = invoices.filter((inv) => inv.status === "Unpaid");
+  const revenue = paid.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const recent = invoices.slice(0, 5);
 
   const stats = [
-    {
-      label: "Total Invoices",
-      value: totalInvoices,
-      icon: FileText,
-      color: "text-blue-600 bg-blue-50",
-    },
-    {
-      label: "Paid",
-      value: paidInvoices.length,
-      icon: CheckCircle,
-      color: "text-green-600 bg-green-50",
-    },
-    {
-      label: "Pending",
-      value: unpaidInvoices.length,
-      icon: Clock,
-      color: "text-yellow-600 bg-yellow-50",
-    },
-    {
-      label: "Total Revenue",
-      value: formatCurrency(totalRevenue),
-      icon: IndianRupee,
-      color: "text-purple-600 bg-purple-50",
-    },
+    { label: "INVOICES", value: String(invoices.length) },
+    { label: "PAID", value: String(paid.length) },
+    { label: "PENDING", value: String(pending.length) },
+    { label: "REVENUE", value: formatCurrency(revenue) },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+    <div className="flex-1 overflow-y-auto bg-[#F7F5EF]">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white rounded-lg border border-gray-200 p-5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500">{stat.label}</span>
-              <div className={`p-2 rounded-lg ${stat.color}`}>
-                <stat.icon className="w-4 h-4" />
-              </div>
+      {/* ── Stats bar ── */}
+      <div
+        className="bg-[#EFECE3] px-8 py-4 flex items-center"
+        style={{
+          borderBottomWidth: "0.5px",
+          borderBottomStyle: "solid",
+          borderBottomColor: "#D8D4C8",
+        }}
+      >
+        {stats.map((stat, i) => (
+          <React.Fragment key={stat.label}>
+            <div className="flex flex-col px-6">
+              <span
+                className="uppercase tracking-widest text-[#8A8778] mb-1"
+                style={{ fontSize: "11px" }}
+              >
+                {stat.label}
+              </span>
+              <span className="text-xl font-medium text-[#0F0F0D]" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                {loading ? "—" : stat.value}
+              </span>
             </div>
-            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-          </div>
+            {i < stats.length - 1 && (
+              <div style={{ width: "0.5px" }} className="h-8 bg-[#D8D4C8]" />
+            )}
+          </React.Fragment>
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 mb-8">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">AI Insights</h2>
+      {/* ── AI Insights ── */}
+      {insightsLoading ? (
+        <div
+          className="bg-[#E8F0EB] px-8 py-3 flex items-center justify-between"
+          style={{
+            borderTopWidth: "0.5px", borderTopStyle: "solid", borderTopColor: "#B8D4C0",
+            borderBottomWidth: "0.5px", borderBottomStyle: "solid", borderBottomColor: "#B8D4C0",
+          }}
+        >
+          <div className="flex items-center">
+            <div className="w-1.5 h-1.5 bg-[#4A7C59] rounded-sm shrink-0" />
+            <span className="uppercase tracking-widest text-[#2A5A38] ml-2" style={{ fontSize: "11px" }}>
+              AI INSIGHTS
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {["w-48", "w-36", "w-52"].map((w, i) => (
+              <div key={i} className={`${w} h-2.5 bg-[#B8D4C0] rounded animate-pulse`} />
+            ))}
+          </div>
         </div>
+      ) : insights.length > 0 ? (
+        <div
+          className="bg-[#E8F0EB] px-8 py-3"
+          style={{
+            borderTopWidth: "0.5px", borderTopStyle: "solid", borderTopColor: "#B8D4C0",
+            borderBottomWidth: "0.5px", borderBottomStyle: "solid", borderBottomColor: "#B8D4C0",
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-[#4A7C59] rounded-sm shrink-0" />
+              <span className="uppercase tracking-widest text-[#2A5A38]" style={{ fontSize: "11px" }}>
+                AI INSIGHTS
+              </span>
+            </div>
+            <span className="uppercase tracking-widest text-[#4A7C59]" style={{ fontSize: "11px" }}>
+              POWERED BY GEMINI
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {insights.map((insight, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="w-1 h-1 rounded-full bg-[#4A7C59] mt-[5px] shrink-0" />
+                <span className="text-sm text-[#2A5A38] line-clamp-2 overflow-hidden">{insight}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : !loading && invoices.length === 0 ? (
+        <div
+          className="bg-[#E8F0EB] px-8 py-3 flex items-center justify-between"
+          style={{
+            borderTopWidth: "0.5px", borderTopStyle: "solid", borderTopColor: "#B8D4C0",
+            borderBottomWidth: "0.5px", borderBottomStyle: "solid", borderBottomColor: "#B8D4C0",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-[#4A7C59] rounded-sm shrink-0" />
+            <span className="text-sm text-[#2A5A38]">
+              Start generating invoices to unlock AI insights
+            </span>
+          </div>
+          <span className="uppercase tracking-widest text-[#4A7C59]" style={{ fontSize: "11px" }}>
+            AI POWERED
+          </span>
+        </div>
+      ) : null}
 
-        <div className="px-5 py-4">
-          {insightsLoading ? (
-            <p className="text-sm text-gray-400 animate-pulse">
-              Generating insights...
-            </p>
-          ) : insights.length === 0 ? (
-            <p className="text-sm text-gray-400">No insights available</p>
-          ) : (
-            <ul className="space-y-3">
-              {insights.map((insight, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="text-blue-500 mt-0.5">•</span>
-                  <span>{insight}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      {/* ── Table header label ── */}
+      <div className="px-8 pt-8 pb-3 flex items-center justify-between">
+        <span
+          className="uppercase tracking-widest text-[#8A8778] font-medium"
+          style={{ fontSize: "11px" }}
+        >
+          RECENT INVOICES
+        </span>
+        <Link
+          to="/invoices"
+          className="uppercase tracking-widest text-[#4A7C59] font-medium hover:text-[#2A5A38] transition-colors duration-150"
+          style={{ fontSize: "11px" }}
+        >
+          VIEW ALL →
+        </Link>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">Recent Invoices</h2>
-        </div>
-
-        {invoices.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-400 text-sm">
-            No invoices yet. Create your first invoice to get started.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500">
-                <tr>
-                  <th className="text-left px-5 py-3 font-medium">Invoice #</th>
-                  <th className="text-left px-5 py-3 font-medium">Client</th>
-                  <th className="text-left px-5 py-3 font-medium">Amount</th>
-                  <th className="text-left px-5 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {invoices.slice(0, 5).map((inv) => (
-                  <tr key={inv._id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium text-gray-800">
-                      {inv.invoiceNumber}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {inv.billTo?.clientName || "—"}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {formatCurrency(inv.total)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          inv.status === "Paid"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-yellow-50 text-yellow-700"
-                        }`}
-                      >
-                        {inv.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* ── Column headers ── */}
+      <div
+        className={`bg-[#EFECE3] px-8 py-2 grid ${TABLE_COLS} items-center`}
+        style={{
+          borderTopWidth: "0.5px",
+          borderTopStyle: "solid",
+          borderTopColor: "#D8D4C8",
+          borderBottomWidth: "0.5px",
+          borderBottomStyle: "solid",
+          borderBottomColor: "#D8D4C8",
+        }}
+      >
+        {["CLIENT", "INVOICE #", "DATE", "AMOUNT", "STATUS", ""].map((col) => (
+          <span
+            key={col}
+            className="uppercase tracking-widest text-[#9A9888]"
+            style={{ fontSize: "11px" }}
+          >
+            {col}
+          </span>
+        ))}
       </div>
+
+      {/* ── Rows / loading / empty ── */}
+      {loading ? (
+        <SkeletonRows />
+      ) : recent.length === 0 ? (
+        <EmptyState />
+      ) : (
+        recent.map((inv) => (
+          <div
+            key={inv._id}
+            className={`group px-8 py-3 grid ${TABLE_COLS} items-center bg-[#FDFCF8] hover:bg-[#EFECE3] transition-colors duration-150 cursor-pointer`}
+            style={{
+              borderBottomWidth: "0.5px",
+              borderBottomStyle: "solid",
+              borderBottomColor: "#ECEAE0",
+            }}
+          >
+            <span className="text-sm font-medium text-[#0F0F0D] truncate pr-3">
+              {inv.billTo?.clientName || "—"}
+            </span>
+            <span className="text-sm text-[#5A5848] truncate pr-3" style={MONO}>
+              {inv.invoiceNumber}
+            </span>
+            <span className="text-sm text-[#5A5848]">
+              {formatDate(inv.createdAt)}
+            </span>
+            <span className="text-sm text-[#0F0F0D]" style={MONO}>
+              {formatCurrency(inv.total)}
+            </span>
+            <div className="flex items-center">
+              <StatusBadge status={inv.status} />
+            </div>
+            <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <Link
+                to={`/invoices/${inv._id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-[#4A7C59] hover:underline"
+              >
+                View
+              </Link>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 };

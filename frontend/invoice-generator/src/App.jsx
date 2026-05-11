@@ -29,7 +29,7 @@ const App = () => {
               <Route path="invoices" element={<AllInvoices />} />
               <Route path="invoices/new" element={<CreateInvoice />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
-              <Route path="ai-parser" element={<AIParser />} />
+              <Route path="workspace" element={<AIParser />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
 

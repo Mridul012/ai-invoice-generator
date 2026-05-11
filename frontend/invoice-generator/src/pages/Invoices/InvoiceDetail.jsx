@@ -4,7 +4,9 @@ import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import { formatCurrency, formatDate } from "../../utils/helper";
 import toast from "react-hot-toast";
-import { ArrowLeft, Trash2, Mail, X, Copy, Printer } from "lucide-react";
+
+const MONO = { fontFamily: "'JetBrains Mono', 'Fira Code', monospace" };
+const border = (color = "#D8D4C8") => ({ borderWidth: "0.5px", borderStyle: "solid", borderColor: color });
 
 const InvoiceDetail = () => {
   const { id } = useParams();
@@ -92,229 +94,283 @@ const InvoiceDetail = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ backgroundColor: "#F7F5EF" }}>
+        <div className="max-w-3xl mx-auto px-6 py-8">
+          <div className="rounded-lg overflow-hidden animate-pulse" style={{ backgroundColor: "#FDFCF8", ...border() }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-6" style={{ borderBottom: "0.5px solid #D8D4C8" }}>
+                <div className="h-3 rounded w-1/4 mb-3" style={{ backgroundColor: "#EFECE3" }} />
+                <div className="h-4 rounded w-2/3" style={{ backgroundColor: "#E8E4DA" }} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!invoice) return null;
 
+  const isPaid = invoice.status === "Paid";
+  const statusStyle = isPaid
+    ? { backgroundColor: "#E8F0EB", color: "#2A5A38", borderColor: "#B8D4C0" }
+    : { backgroundColor: "#F5E4E4", color: "#7A2020", borderColor: "#D4A0A0" };
+  const toggleStyle = isPaid
+    ? { backgroundColor: "#F5EDDA", color: "#7A4A10", borderColor: "#D4B880" }
+    : { backgroundColor: "#E8F0EB", color: "#2A5A38", borderColor: "#B8D4C0" };
+
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-6 no-print">
-        <button
-          onClick={() => navigate("/invoices")}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Invoices
-        </button>
+    <div className="flex-1 min-h-0 overflow-y-auto" style={{ backgroundColor: "#F7F5EF" }}>
+      <div className="max-w-3xl mx-auto px-6 py-8">
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Print
-          </button>
-          <button
-            onClick={handleGenerateEmail}
-            disabled={generatingEmail}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
-          >
-            <Mail className="w-4 h-4" />
-            {generatingEmail ? "Generating..." : "Reminder Email"}
-          </button>
-          <button
-            onClick={toggleStatus}
-            className={`text-sm font-medium px-4 py-2 rounded-lg ${
-              invoice.status === "Paid"
-                ? "bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                : "bg-green-50 text-green-700 hover:bg-green-100"
-            }`}
-          >
-            Mark as {invoice.status === "Paid" ? "Unpaid" : "Paid"}
-          </button>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+        {/* Page header */}
+        <div className="flex items-center justify-between mb-6 no-print">
+          <p className="uppercase tracking-widest text-[#8A8778]" style={{ fontSize: "11px" }}>
+            Invoices / Detail
+          </p>
+
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              onClick={() => window.print()}
+              className="text-[12px] text-[#5A5848] rounded-md px-4 py-2 hover:text-[#0F0F0D] transition-colors"
+              style={{ ...border() }}
+            >
+              Print
+            </button>
+            <button
+              onClick={handleGenerateEmail}
+              disabled={generatingEmail}
+              className="text-[12px] text-[#5A5848] rounded-md px-4 py-2 hover:text-[#0F0F0D] transition-colors disabled:opacity-40"
+              style={{ ...border() }}
+            >
+              {generatingEmail ? "Generating…" : "Reminder email"}
+            </button>
+            <button
+              onClick={toggleStatus}
+              className="text-[12px] font-medium rounded-md px-4 py-2 transition-colors"
+              style={{
+                borderWidth: "0.5px",
+                borderStyle: "solid",
+                borderColor: toggleStyle.borderColor,
+                backgroundColor: toggleStyle.backgroundColor,
+                color: toggleStyle.color,
+              }}
+            >
+              Mark as {isPaid ? "Unpaid" : "Paid"}
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-[12px] text-[#8A8778] hover:text-[#7A2020] transition-colors px-3 py-2"
+            >
+              Delete
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="print-area bg-white border border-gray-200 rounded-lg">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">
-                {invoice.invoiceNumber}
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Created: {formatDate(invoice.createdAt, "long")}
-              </p>
-              {invoice.duedate && (
-                <p className="text-sm text-gray-500">
-                  Due: {formatDate(invoice.duedate, "long")}
+        {/* Invoice document */}
+        <div className="print-area rounded-lg overflow-hidden" style={{ backgroundColor: "#FDFCF8", ...border() }}>
+
+          {/* Invoice header */}
+          <div className="p-6" style={{ borderBottom: "0.5px solid #D8D4C8" }}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="uppercase tracking-widest text-[#8A8778] mb-1" style={{ fontSize: "10px" }}>
+                  Invoice
                 </p>
+                <p className="text-lg text-[#0F0F0D] font-medium" style={MONO}>
+                  {invoice.invoiceNumber}
+                </p>
+                <p className="text-sm text-[#5A5848] mt-2">
+                  Issued {formatDate(invoice.createdAt, "long")}
+                </p>
+                {invoice.duedate && (
+                  <p className="text-sm text-[#5A5848]">
+                    Due {formatDate(invoice.duedate, "long")}
+                  </p>
+                )}
+              </div>
+              <span
+                className="text-[10px] font-medium uppercase tracking-widest px-3 py-1.5 rounded"
+                style={{
+                  ...border(statusStyle.borderColor),
+                  backgroundColor: statusStyle.backgroundColor,
+                  color: statusStyle.color,
+                }}
+              >
+                {invoice.status}
+              </span>
+            </div>
+          </div>
+
+          {/* From / To */}
+          <div className="grid grid-cols-2" style={{ borderBottom: "0.5px solid #D8D4C8" }}>
+            <div className="p-6" style={{ borderRight: "0.5px solid #D8D4C8" }}>
+              <p className="uppercase tracking-widest text-[#8A8778] mb-3" style={{ fontSize: "11px" }}>
+                From
+              </p>
+              <p className="text-sm font-medium text-[#0F0F0D]">
+                {invoice.billFrom?.businessName || "—"}
+              </p>
+              {invoice.billFrom?.email && (
+                <p className="text-sm text-[#5A5848]">{invoice.billFrom.email}</p>
+              )}
+              {invoice.billFrom?.address && (
+                <p className="text-sm text-[#5A5848]">{invoice.billFrom.address}</p>
+              )}
+              {invoice.billFrom?.phone && (
+                <p className="text-sm text-[#5A5848]">{invoice.billFrom.phone}</p>
               )}
             </div>
-            <span
-              className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-full ${
-                invoice.status === "Paid"
-                  ? "bg-green-50 text-green-700"
-                  : "bg-red-50 text-red-700"
-              }`}
+            <div className="p-6">
+              <p className="uppercase tracking-widest text-[#8A8778] mb-3" style={{ fontSize: "11px" }}>
+                To
+              </p>
+              <p className="text-sm font-medium text-[#0F0F0D]">
+                {invoice.billTo?.clientName || "—"}
+              </p>
+              {invoice.billTo?.email && (
+                <p className="text-sm text-[#5A5848]">{invoice.billTo.email}</p>
+              )}
+              {invoice.billTo?.address && (
+                <p className="text-sm text-[#5A5848]">{invoice.billTo.address}</p>
+              )}
+              {invoice.billTo?.phone && (
+                <p className="text-sm text-[#5A5848]">{invoice.billTo.phone}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Items */}
+          <div style={{ borderBottom: "0.5px solid #D8D4C8" }}>
+            <div className="px-6 pt-5 pb-3">
+              <p className="uppercase tracking-widest text-[#8A8778]" style={{ fontSize: "11px" }}>
+                Items
+              </p>
+            </div>
+
+            <div
+              className="grid px-6 py-2"
+              style={{
+                gridTemplateColumns: "3fr 1fr 1.3fr 1fr 1.3fr",
+                backgroundColor: "#F0EDE4",
+                fontSize: "10px",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "#8A8778",
+              }}
             >
-              {invoice.status}
+              <span>Description</span>
+              <span>Qty</span>
+              <span>Price</span>
+              <span>Tax</span>
+              <span className="text-right">Total</span>
+            </div>
+
+            {invoice.items?.map((item, index) => (
+              <div
+                key={index}
+                className="grid px-6 py-3"
+                style={{
+                  gridTemplateColumns: "3fr 1fr 1.3fr 1fr 1.3fr",
+                  borderTop: "0.5px solid #EFECE3",
+                }}
+              >
+                <span className="text-sm text-[#0F0F0D]">{item.name}</span>
+                <span className="text-sm text-[#5A5848]" style={MONO}>{item.quantity}</span>
+                <span className="text-sm text-[#5A5848]" style={MONO}>{formatCurrency(item.unitPrice)}</span>
+                <span className="text-sm text-[#5A5848]" style={MONO}>{item.taxpercent || 0}%</span>
+                <span className="text-sm text-right font-medium text-[#0F0F0D]" style={MONO}>
+                  {formatCurrency(item.total)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Notes + Subtotals */}
+          <div className="grid grid-cols-2" style={{ borderBottom: "0.5px solid #D8D4C8" }}>
+            <div className="p-6" style={{ borderRight: "0.5px solid #D8D4C8" }}>
+              {invoice.notes && (
+                <>
+                  <p className="uppercase tracking-widest text-[#8A8778] mb-2" style={{ fontSize: "11px" }}>
+                    Notes
+                  </p>
+                  <p className="text-sm text-[#5A5848] leading-relaxed">{invoice.notes}</p>
+                </>
+              )}
+            </div>
+
+            <div className="p-6 flex flex-col justify-end">
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between text-sm text-[#5A5848]">
+                  <span>Subtotal</span>
+                  <span style={MONO}>{formatCurrency(invoice.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-[#5A5848]">
+                  <span>Tax</span>
+                  <span style={MONO}>{formatCurrency(invoice.taxTotal)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Full-width total bar */}
+          <div className="bg-[#0F0F0D] px-8 py-4 flex justify-between items-center">
+            <span className="uppercase tracking-widest text-[#A8A498]" style={{ fontSize: "11px" }}>
+              TOTAL DUE
+            </span>
+            <span className="text-xl font-medium text-[#F0EDE4]" style={MONO}>
+              {formatCurrency(invoice.total)}
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 border-b border-gray-200">
-          <div className="p-6 md:border-r border-gray-200">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">
-              From
-            </h3>
-            <p className="text-sm font-medium text-gray-800">
-              {invoice.billFrom?.businessName || "—"}
-            </p>
-            {invoice.billFrom?.email && (
-              <p className="text-sm text-gray-500">{invoice.billFrom.email}</p>
-            )}
-            {invoice.billFrom?.address && (
-              <p className="text-sm text-gray-500">{invoice.billFrom.address}</p>
-            )}
-            {invoice.billFrom?.phone && (
-              <p className="text-sm text-gray-500">{invoice.billFrom.phone}</p>
-            )}
-          </div>
-          <div className="p-6">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">
-              To
-            </h3>
-            <p className="text-sm font-medium text-gray-800">
-              {invoice.billTo?.clientName || "—"}
-            </p>
-            {invoice.billTo?.email && (
-              <p className="text-sm text-gray-500">{invoice.billTo.email}</p>
-            )}
-            {invoice.billTo?.address && (
-              <p className="text-sm text-gray-500">{invoice.billTo.address}</p>
-            )}
-            {invoice.billTo?.phone && (
-              <p className="text-sm text-gray-500">{invoice.billTo.phone}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="border-b border-gray-200">
-          <div className="px-6 py-4">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-              Items
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-gray-200 bg-gray-50">
-                  <th className="text-left px-6 py-3 font-medium text-gray-500">Name</th>
-                  <th className="text-left px-6 py-3 font-medium text-gray-500">Qty</th>
-                  <th className="text-left px-6 py-3 font-medium text-gray-500">Price</th>
-                  <th className="text-left px-6 py-3 font-medium text-gray-500">Tax %</th>
-                  <th className="text-right px-6 py-3 font-medium text-gray-500">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.items?.map((item, index) => (
-                  <tr key={index} className="border-b border-gray-100 last:border-0">
-                    <td className="px-6 py-3 text-gray-800">{item.name}</td>
-                    <td className="px-6 py-3 text-gray-600">{item.quantity}</td>
-                    <td className="px-6 py-3 text-gray-600">{formatCurrency(item.unitPrice)}</td>
-                    <td className="px-6 py-3 text-gray-600">{item.taxpercent || 0}%</td>
-                    <td className="px-6 py-3 text-gray-800 text-right font-medium">
-                      {formatCurrency(item.total)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="p-6 md:border-r border-gray-200">
-            {invoice.notes && (
-              <>
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
-                  Notes
-                </h3>
-                <p className="text-sm text-gray-600">{invoice.notes}</p>
-              </>
-            )}
-          </div>
-
-          <div className="p-6 flex flex-col justify-end">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-500">
-                <span>Subtotal</span>
-                <span>{formatCurrency(invoice.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Tax</span>
-                <span>{formatCurrency(invoice.taxTotal)}</span>
-              </div>
-              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-800 text-lg">
-                <span>Total</span>
-                <span>{formatCurrency(invoice.total)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className="pb-8" />
       </div>
 
+      {/* Reminder email modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 no-print">
-          <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-800">
-                Payment Reminder Email
-              </h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 no-print">
+          <div
+            className="w-full max-w-lg max-h-[80vh] flex flex-col rounded-lg overflow-hidden"
+            style={{ backgroundColor: "#FDFCF8", ...border() }}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ borderBottom: "0.5px solid #D8D4C8" }}
+            >
+              <p className="uppercase tracking-widest text-[#8A8778]" style={{ fontSize: "11px" }}>
+                Reminder Email
+              </p>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#8A8778] hover:text-[#0F0F0D] transition-colors text-xl leading-none"
               >
-                <X className="w-5 h-5" />
+                ×
               </button>
             </div>
 
             <div className="px-6 py-4 overflow-y-auto flex-1">
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+              <pre className="text-sm text-[#0F0F0D] whitespace-pre-wrap leading-relaxed" style={{ fontFamily: "inherit" }}>
                 {emailText}
               </pre>
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <div
+              className="flex items-center justify-end gap-3 px-6 py-4"
+              style={{ borderTop: "0.5px solid #D8D4C8" }}
+            >
               <button
                 onClick={handleCopyEmail}
-                className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="bg-[#4A7C59] text-white text-sm font-medium rounded-md px-4 py-2 hover:bg-[#3d6b4a] transition-colors"
               >
-                <Copy className="w-4 h-4" />
-                Copy
+                Copy to clipboard
               </button>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="text-sm font-medium px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                className="text-sm text-[#5A5848] rounded-md px-4 py-2 hover:text-[#0F0F0D] transition-colors"
+                style={{ ...border() }}
               >
                 Close
               </button>
